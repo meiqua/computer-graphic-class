@@ -203,8 +203,75 @@ int Mesh::CountBoundaryLoops()
 int Mesh::CountConnectedComponents()
 {
 int no_component =0;
-cout<<"number of Connected components"<<endl;
 
+FaceList validFaces;
+for (size_t i = 0; i<fList.size(); i++) {
+	if (fList[i] != NULL && fList[i]->HalfEdge()->LeftFace() != NULL)
+	{
+		Face *f = fList[i];
+		const Vector3d & pos1 = f->HalfEdge()->Start()->Position();
+		const Vector3d & pos2 = f->HalfEdge()->End()->Position();
+		const Vector3d & pos3 = f->HalfEdge()->Next()->End()->Position();
+		Vector3d normal = (pos2 - pos1).Cross(pos3 - pos1);
+		normal /= normal.L2Norm();
+
+		f->SetNormal_f(normal);
+		if (normal[1] < 0) {
+			validFaces.push_back(f);
+		}
+
+	}
+}
+
+// union find method
+vector<int> union_find(validFaces.size());
+for (size_t i = 0; i < union_find.size(); i++) {
+	union_find[i] = i;
+}
+for (size_t i = 0; i < validFaces.size() - 1; i++) {
+	int parent = i;
+	int child;
+	for (size_t i1 = i + 1; i1 < validFaces.size(); i1++) {
+		// if have same vertex, regard as connection
+		Vertex* v11 = validFaces[i]->HalfEdge()->Start();
+		Vertex* v12 = validFaces[i]->HalfEdge()->Next()->Start();
+		Vertex* v13 = validFaces[i]->HalfEdge()->Next()->Next()->Start();
+		Vertex* v21 = validFaces[i1]->HalfEdge()->Start();
+		Vertex* v22 = validFaces[i1]->HalfEdge()->Next()->Start();
+		Vertex* v23 = validFaces[i1]->HalfEdge()->Next()->Next()->Start();
+		if ((v11 == v21 || v11 == v22 || v11 == v23) ||
+			(v12 == v21 || v12 == v22 || v12 == v23) ||
+			(v13 == v21 || v13 == v22 || v13 == v23)) {
+			child = i1;
+			vector<int> passBy;
+			while (child != union_find[child]) //find child root
+			{
+				passBy.push_back(child);
+				child = union_find[child];
+			}
+			for (size_t i11 = i + 1; i11 < passBy.size(); i11++) {
+				union_find[passBy[i]] = child;
+			}
+			passBy.clear();
+			while (parent != union_find[parent]) //find parent root
+			{
+				passBy.push_back(parent);
+				parent = union_find[parent];
+			}
+			for (size_t i11 = i + 1; i11 < passBy.size(); i11++) {
+				union_find[passBy[i]] = parent;
+			}
+			union_find[child] = parent;
+		}
+	}
+}
+for (size_t i = 0; i < union_find.size(); i++) {
+	if (union_find[i] == i) {
+		no_component++;
+	}
+}
+
+cout << "number of Connected components: " << no_component <<endl;
 return no_component;
 }
 
