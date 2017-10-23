@@ -1,0 +1,1355 @@
+while(cc[k] !=NULL)
+	{
+		//strat recursing the loop split process      
+
+	//cout<<"the size of the boundary of the terrain is "<<bheList.size()<<endl;
+
+
+
+
+	min_edge=NULL;
+    benchmark = 1000000000.0; // mark the least dist in each loop
+
+
+
+
+
+	//for (size_t i=0; i< bheList.size(); i++)
+	HEdge *cur=cc[k];
+	int countt = 0; 
+		while(cur)
+		{
+	   //HEdge *cur=bheList[i];
+
+	   HEdge *next=cur->Prev();   
+
+	   double V_sum = 0.0; //sum of the angles
+       double L_sum = 0.0; //sum of the left angles
+	   //double L_temp = 0.0;
+	   double R_sum = 0.0; //sum of the right angles
+	   //double R_temp = 0.0;
+	   //double adj_temp = 0.0;
+	   double ab_adj = 0.0; // an adjacent angle of the middle angle
+	   double beta = 0.0; // the right half
+	   double co_a = 0.0;
+	   double co_b = 0.0;
+	   double co_t = 0.0;
+	   double rhs = 0.0;
+	   double tmp_dist001 = 0.0;
+	   double tmp_dist002 = 0.0;
+	   double tmp_dist003 = 0.0;
+	   //int count = 0;
+
+	   cur->Start()->dist = 100000.0; //initialize
+
+
+		  const Vector3d & pos1 = cur->Start()->Position();
+
+		  // HANDLE THE INITIALIZATION OF "NEXT" HERE, FROM THE SECOND INTERATION ON, restore to the initial value
+
+          next = next->Next()->Twin();
+
+          while(next && next != cur->Prev()) // cover all the angles already
+		  {
+			  
+			 const Vector3d & pos2 = next->Start()->Position();
+			 const Vector3d & pos3 = next->Next()->End()->Position();
+             
+		     Vector3d v2 = pos2 - pos1;
+	         Vector3d v3 = pos3 - pos1;
+		     v2 /= v2.L2Norm();
+	         v3 /= v3.L2Norm();
+	         double  L_temp = v2.Dot(v3);
+             V_sum = V_sum + acos(L_temp);
+             
+			 next = next->Next()->Twin();
+           	  
+		  }
+		    cur->Start()->sum_angle = V_sum; //record the sum of angles here, on the unburned side
+
+		    next = next->Next()->Twin();// restore to the initial value
+
+            if(V_sum > 2*PI)
+			cout<<" V_sum = "<< V_sum <<endl;
+
+			L_sum = 0.0; //restore to the original value
+		    while(next && L_sum < 0.5*V_sum)//next && next != cur->Prev()
+			{
+			 const Vector3d & pos4 = next->Start()->Position();
+			 const Vector3d & pos5 = next->Next()->End()->Position();
+             
+		     Vector3d v4 = pos4 - pos1;
+	         Vector3d v5 = pos5 - pos1;
+		     v4 /= v4.L2Norm();
+	         v5 /= v5.L2Norm();
+
+	         double  K_temp = v4.Dot(v5);
+             L_sum = L_sum + acos(K_temp);
+             next->Next()->angle = L_sum;//record the angle subtend to the current edge
+
+			 if(cur->Twin()->Prev() == cur->Prev()->Twin()->Next()) //handling the case when a vertex is only incident to two edges
+			 {
+			   //Vector3d vx = pos5 - pos1;
+               tmp_dist001 = 10000000000.0;
+			   cur->Start()->dist = tmp_dist001;
+			   cur->Start()->SetCur_pos1(pos5); // mark the vertex realizing the distance, IS THIS FEASIBLE???????????????
+			   cur->SetOff_pos(next->Next()->End());
+               cur->Start()->event_type = 0;
+			   if (benchmark > cur->Start()->dist)
+                  {  
+					benchmark = cur->Start()->dist;
+                    min_edge = cur;
+				  }
+
+			 }
+             
+
+			 if (L_sum > 0.5*V_sum)
+			 break;
+
+if(L_sum < 0.0)
+cout<<" L_sum = "<< L_sum <<endl;
+
+
+             //cout<<" L_sum = "<< L_sum <<endl;
+
+			 // below the "edge entering" face events are addressed
+
+             
+			   Vector3d vx = pos5 - pos1;
+               tmp_dist001 = vx.L2Norm()* sin(L_sum);
+if(tmp_dist001 < 0.0)
+			 
+cout<<"11111111111111111111111111111111 "<<endl;
+
+			   if(cur->Start()->dist > tmp_dist001 || (cur->Start()->dist - tmp_dist002) < 0.00000000005) // update nex->Start()->dist
+			   { 
+				 cur->Start()->dist = tmp_dist001;
+			     cur->Start()->SetCur_pos1(pos5); // mark the vertex realizing the distance, IS THIS FEASIBLE???????????????
+				 cur->Start()->event_type =0;
+				 cur->SetOff_pos(next->Next()->End());
+				 if(fabs(pos5.X()) < 0.000000005 && fabs(pos5.Y()) < 0.000000005 && fabs(pos5.Z()) < 0.000000005)
+			     cout<<"MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"<<endl;
+				 if (benchmark > cur->Start()->dist)
+                  {  benchmark = cur->Start()->dist;
+                     min_edge = cur;
+				  }
+			   }	 
+			 //cout<<" L_sum = "<< L_sum <<endl;
+	
+             //below the "bisector leaving" face events are addressed
+
+
+			 next = next->Next()->Twin(); // after the  "if" condition
+			 //cout<<" L_sum = "<< L_sum <<endl;
+
+			}//end while(next && L_sum < 0.5*V_sum)
+
+          //if(V_sum > PI- 0.118 && V_sum < PI + 0.118)
+		  //{V_sum = PI;}
+		  //if (V_sum > PI) 
+		  //{cout<<" V_sum = "<< V_sum <<endl;}
+		
+		  beta = L_sum -  0.5*V_sum; // compute beta
+            
+
+
+
+
+			
+//cout<<" beta = "<< beta <<endl;
+
+
+
+
+//next = next->Twin()->Prev(); //back one step
+
+
+		    
+          if(fabs(V_sum - PI) > 0.000005 && next->Prev() == next->Next()->Next()) // not equal to PI
+		  {
+            ab_adj = 0.0;
+
+			const Vector3d & pos6 = next->Start()->Position();
+			const Vector3d & pos7 = next->Next()->End()->Position();
+
+			Vector3d v6 = pos1 - pos7;//const Vector3d & Vector3d v6 = pos1 - pos5; // compute ab_adj
+	        Vector3d v7 = pos6 - pos7;//const Vector3d & Vector3d v7 = pos4 - pos5;
+            Vector3d v71 = pos7 - pos1;//20110829
+		    v6 /= v6.L2Norm();
+	        v7 /= v7.L2Norm();
+	        ab_adj = v6.Dot(v7);
+            ab_adj = acos(ab_adj);
+
+			//cout<<" ab_adj = "<< ab_adj <<endl;
+
+            
+            rhs = v71.L2Norm() * sin(beta)  / sin(PI - beta - ab_adj);
+			//Vector3d v11 = rhs*v7;
+
+			const Vector3d & pos11 = rhs*v7 + pos7;
+
+
+			tmp_dist002 = v71.L2Norm() * sin(ab_adj)*sin(0.5*V_sum) / sin(PI - beta - ab_adj);
+
+
+			 if(cur->Start()->dist > tmp_dist002 || (cur->Start()->dist - tmp_dist002) < 0.0000005)//&& tmp_dist002> 0.0
+			 { 
+			   cur->Start()->dist = tmp_dist002; // the distance might be propagated
+	 
+			   //Vector3d new_position(pos7.X() + co_a*co_t, pos7.Y() + co_b*co_t, pos7.Z() + co_t);
+
+             cur->Start()->SetCur_pos(pos11);
+			 cur->Start()->event_type =10;
+
+			 if (benchmark > cur->Start()->dist)
+                {  
+				  benchmark = cur->Start()->dist;
+                  min_edge = cur;
+				}
+			 }
+		  } // end of "if(V_sum - PI > 0.005)"
+
+
+            // below the least dist to propogate from nex-Prev() is computed
+	       //next = next->Twin()->Prev(); //backward one step
+
+ 
+            
+		    R_sum = 0.0;
+			next = cur->Prev()->Twin();//repositioning next
+
+			if(R_sum > 0.5*V_sum)
+cout<<"QQQQQQQQQQQQQQQQQQ"<<endl;
+
+if(R_sum <0.0)
+			 
+cout<<"YYYYYYYYYYYYYYYYYY"<<endl;
+
+		    while(next && R_sum < 0.5*V_sum)
+			{
+			 
+			   const Vector3d & pos8 = next->End()->Position();//here we have repeated the vector alloacation operation, shall we abort it??
+			   const Vector3d & pos9 = next->Prev()->Start()->Position();
+             
+		       Vector3d v8 = pos8 - pos1;
+	           Vector3d v9 = pos9 - pos1;
+		       v8 /= v8.L2Norm();
+	           v9 /= v9.L2Norm();
+             
+	           double R_temp = v8.Dot(v9);
+               R_sum = R_sum + acos(R_temp);
+
+               next->Prev()->Twin()->angle = R_sum;//record the subtended angle 
+			   if (R_sum > 0.5*V_sum)
+			   break;
+
+    
+			 // below the "edge entering" face events are addressed
+
+               Vector3d vy = pos9 - pos1;
+               tmp_dist003 = vy.L2Norm()* sin(R_sum);
+
+if(R_sum < 0.0)
+			 
+cout<<"33333333333333333333333333333333333333 "<<endl;
+			   
+			   if(cur->Start()->dist > tmp_dist003 || (cur->Start()->dist - tmp_dist003) < 0.00000000005) // update nex->Start()->dist
+			   { 
+				 cur->Start()->dist = tmp_dist003;
+			     cur->Start()->SetCur_pos1(pos9); // mark the vertex realizing the distance
+				 cur->Start()->event_type =0;
+				 cur->SetOff_pos(next->Prev()->Start());
+
+				 if(fabs(pos9.X()) < 0.000000005 && fabs(pos9.Y()) < 0.000000005 && fabs(pos9.Z()) < 0.000000005)
+					 cout<<"MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"<<endl;
+				 if (benchmark > cur->Start()->dist)
+                  {  benchmark = cur->Start()->dist;
+                     min_edge = cur;
+				  }
+			   }	  
+
+			 next = next->Prev()->Twin(); // after the  "if" condition
+
+			}
+     
+
+
+
+
+V_sum = 0.0;
+
+//cout<<"benchmark = "<<benchmark<<endl;
+
+
+    cur = cur->Next();
+
+	countt = 1;
+	if(cur == cc[k] && countt == 1)
+	{break;}
+
+	} // end for loop
+
+
+/***********the start of detecting split events************/
+  countt = 0;
+  HEdge *curr = cc[k];
+  //for (size_t i=0; i< bheList.size(); i++)
+  while (curr)
+  {
+	HEdge *next2=curr->Twin();
+
+//INVESTIGATE NEXT1 TOMORROW
+//INVESTIGATE NEXT1 TOMORROW
+//INVESTIGATE NEXT1 TOMORROW
+//INVESTIGATE NEXT1 TOMORROW
+	
+    //computwe the normal of the face where next1 lies 
+
+    const Vector3d & pos0001 = next2->Start()->Position();
+    const Vector3d & pos0002 = next2->End()->Position();
+	const Vector3d & pos0003 = next2->Next()->End()->Position();
+	Vector3d normal0001 = (pos0002-pos0001).Cross(pos0003-pos0001);
+
+	if(next2->Start()->dist ==0.0)//CHECK HERE
+	next2->Start()->dist =100000000000.0;
+
+
+   //compute "next2->Start()->SetCur_pos007(v_007)" below
+   //start searching on a single face
+   //HEdge *next2 =  next1;
+   int cnt =0;
+   while(next2)
+   {
+	  
+	  if(next2->Prev()->Twin()->LeftFace() != NULL)
+	  {next2->Start()->SetCur_pos007(next2->Prev()->Start()->Position());}
+	  else 
+	  {
+		 const Vector3d & pos18 = next2->Start()->Position();
+		 const Vector3d & pos19 = next2->End()->Position();
+         const Vector3d & pos20 = next2->Prev()->Start()->Position();
+             
+		 Vector3d v190 = pos19 - pos18;
+	     Vector3d v120 = pos20 - pos18;
+		 Vector3d v191 = v190/v190.L2Norm();
+	     Vector3d v121 = v120/v120.L2Norm();
+             
+	     double R_191 = v191.Dot(v121);
+         R_191 = 0.5*acos(R_191);
+
+		 Vector3d v180 = pos18 - pos19;
+	     Vector3d v122 = pos20 - pos19;
+		 v180 /= v180.L2Norm();
+	     v122 /= v122.L2Norm();
+
+	     double R_122 = v180.Dot(v122);
+         R_122 = acos(R_122);
+         
+         Vector3d v_007 = pos19 + ((v190.L2Norm())*sin(R_191)/sin(PI-R_191-R_122))*v122;
+		 //prepare the symmetrical position of v_007
+         Vector3d v_008 = pos18 - v_007;
+		 v_008 = 2*v_008 + v_007;
+		 
+		 //WE NEED TO MAKE SURE THAT IT IS ON THE LEFT OF THE DIRECTED EDGE
+
+
+         double x1av = next2->Start()->Position().X();
+		 double y1av = next2->Start()->Position().Y();
+		 double x2av = next2->End()->Position().X();
+		 double y2av = next2->End()->Position().Y();
+
+		 if(normal0001.Z() > 0.0 && (v_007.X() - x1av)*(y2av - y1av) - (v_007.Y() - y1av)*(x2av - x1av) > 0.0 || 
+			 normal0001.Z() < 0.0 && (v_007.X() - x1av)*(y2av - y1av) - (v_007.Y() - y1av)*(x2av - x1av) < 0.0)
+         next2->Start()->SetCur_pos007(v_008);
+		 else
+		 next2->Start()->SetCur_pos007(v_007);
+	  
+	  }//else
+
+
+	  next2 =  next2->Next();
+      cnt=1;
+	  if(next2 == curr->Twin() && cnt ==1)
+	  {break;}
+ 
+   }
+	
+//detect edge-vertex event
+    next2 =  curr->Twin();//restore next2 to the oringial value
+	cnt =0;//reset its value
+   while(next2)
+   {
+int contvv = 0;	
+HEdge *next333 =  next2;
+while(next333)
+{
+ if(next333->Twin()->LeftFace() != NULL && next333->Prev()->Twin()->LeftFace()!=NULL && next333->Prev() != next333->Next()->Next())//make up the edge-vertex case
+ {
+   HEdge *next444 =  next333->Next();
+   int contbb = 0;
+   while(next444)
+   {
+     if(next444->Twin()->LeftFace() == NULL)
+	 {
+	  const Vector3d & posvv1 = next444->Start()->Position();
+	  const Vector3d & posvv2 = next444->End()->Position();
+	  const Vector3d & posvv3 = next333->Start()->Position();
+
+	  Vector3d vv1 = posvv3 - posvv1;
+	  Vector3d vv2 = posvv2 - posvv1;
+	  vv1 /= vv1.L2Norm();
+	  vv2 /= vv2.L2Norm();
+      double R_vv = vv1.Dot(vv2);
+      R_vv = acos(R_vv);
+
+	  Vector3d vv3 = posvv3 - posvv1;//make a copy here
+
+      double tmp_dist00vv = (vv3.L2Norm())*sin(R_vv);
+
+
+
+	  Vector3d vv24 = posvv3;
+
+	  double vx1 = next444->Start()->Position().X();
+	  double vy1 = next444->Start()->Position().Y();
+
+	  double vx2 = next444->End()->Position().X();
+	  double vy2 = next444->End()->Position().Y();
+
+
+
+	  double vx10 = next444->Start()->Cur_pos007().X();
+	  double vy10 = next444->Start()->Cur_pos007().Y();
+
+	  double vx11 = next444->End()->Cur_pos007().X();
+	  double vy11 = next444->End()->Cur_pos007().Y();
+
+
+      //record the result if needed
+
+      if(normal0001.Z()> 0.0  && (vv24.X() - vx1)*(vy2 - vy1) - (vv24.Y() - vy1)*(vx2 - vx1) <0.0  && (vv24.X() - vx10)*(vy1 - vy10) - (vv24.Y() - vy10)*(vx1 - vx10) <0.0 && 
+          (vv24.X() - vx2)*(vy11 - vy2) - (vv24.Y() - vy2)*(vx11 - vx2) <0.0  || normal0001.Z()< 0.0  && (vv24.X() - vx1)*(vy2 - vy1) - (vv24.Y() - vy1)*(vx2 - vx1) >0.0  && (vv24.X() - vx10)*(vy1 - vy10) - (vv24.Y() - vy10)*(vx1 - vx10) >0.0 && 
+          (vv24.X() - vx2)*(vy11 - vy2) - (vv24.Y() - vy2)*(vx11 - vx2) >0.0 )//normal001.Z() Z > 0.0 && (xx_1 - x_1)*(y_3 - y_1) - (yy_1 - y_1)*(x_3 - x_1) <0 
+	  {
+      //tmp_dist004 = tmp_dist004*sin(0.5*RR_temp); //update tmp_dist004
+
+	  if(next444->Start()->dist > tmp_dist00vv || (next444->Start()->dist - tmp_dist00vv) < 0.00000000005) // update nex->Start()->dist
+		{ 
+		   next444->Start()->dist = tmp_dist00vv;
+		   next444->Start()->SetCur_pos1(posvv3); //WE NEED TO JUDGE WHETHER IT LIES INSIDE INSIDE THE CORRESPONDING SWEEPING AREA
+		   next444->Start()->event_type =0; //mark it as edge-vertex event
+		   
+		   if (benchmark > next444->Start()->dist)
+              {  benchmark = next444->Start()->dist;
+                 min_edge = next444->Twin();
+		      }
+	    }
+	  }//if(normal0001.Z()> 0.0.....
+		
+	 
+	 
+	 }
+
+     next444 = next444->Next();
+     contbb =1;
+
+     if(next444 ==next333 && contbb ==1 || next444 == next333->Prev() && contbb ==1)
+     break;
+   }
+
+ 
+ }
+ 
+ next333 = next333->Next();
+ contvv =1;
+
+ if(next333 == next2 && contvv ==1)
+ break;
+}
+
+	   
+	   
+	   
+if(next2->Twin()->LeftFace()==NULL && next2->Prev()->Twin()->LeftFace()==NULL && next2->Start()->sum_angle > PI + 0.000005)
+{    
+	HEdge *next3 =  next2->Next();
+	int cnt1 =0;
+	while(next3)
+	{
+	  //sstatic
+if(next3->Twin()->LeftFace() == NULL)
+{
+double x3 = next2->Start()->Position().X();
+double y3 = next2->Start()->Position().Y();
+double z3 = next2->Start()->Position().Z();
+
+double x4 = next2->End()->Position().X();
+double y4 = next2->End()->Position().Y();
+double z4 = next2->End()->Position().Z();
+
+	  double x1 = next3->Start()->Position().X();
+	  double y1 = next3->Start()->Position().Y();
+	  double z1 = next3->Start()->Position().Z();
+
+	  double x2 = next3->End()->Position().X();
+	  double y2 = next3->End()->Position().Y();
+	  double z2 = next3->End()->Position().Z();
+
+	  double xx1 = x1+(x1-x2)*(((y1-y3)*(x3-x4)-(y3-y4)*(x1-x3))/((y3-y4)*(x1-x2)-(x3-x4)*(y1-y2)));
+
+	  double yy1 = y1+(y1-y2)*(((y1-y3)*(x3-x4)-(y3-y4)*(x1-x3))/((y3-y4)*(x1-x2)-(x3-x4)*(y1-y2)));
+
+	  double zz1 = z1+(z1-z2)*(((y1-y3)*(x3-x4)-(y3-y4)*(x1-x3))/((y3-y4)*(x1-x2)-(x3-x4)*(y1-y2)));
+
+	  //t=(y13*x34-y34*x13)/(y34*x12-x34*y12)
+
+
+	  double x5 = next2->Prev()->Start()->Position().X();
+	  double y5 = next2->Prev()->Start()->Position().Y();
+	  double z5 = next2->Prev()->Start()->Position().Z();
+
+	  double xx2 = x1+(x1-x2)*(((y1-y3)*(x3-x5)-(y3-y5)*(x1-x3))/((y3-y5)*(x1-x2)-(x3-x5)*(y1-y2)));
+
+	  double yy2 = y1+(y1-y2)*(((y1-y3)*(x3-x5)-(y3-y5)*(x1-x3))/((y3-y5)*(x1-x2)-(x3-x5)*(y1-y2)));
+
+	  double zz2 = z1+(z1-z2)*(((y1-y3)*(x3-x5)-(y3-y5)*(x1-x3))/((y3-y5)*(x1-x2)-(x3-x5)*(y1-y2)));
+
+      Vector3d position1(xx1, yy1, zz1);
+
+	  Vector3d position2(xx2, yy2, zz2);
+      
+      Vector3d pos2_cur = position2 -  next2->Start()->Position();
+
+      double edge_split = pos2_cur.L2Norm();
+
+	  Vector3d v18 = position1 - next2->Start()->Position();
+	  Vector3d v19 = position2 - next2->Start()->Position();
+	  v18 /= v18.L2Norm();
+	  v19 /= v19.L2Norm();
+             
+	  double RR_temp = v18.Dot(v19);
+      RR_temp = acos(RR_temp);
+
+
+	  Vector3d v20 = position1 - position2;
+	  Vector3d v21 = next2->Start()->Position() - position2;
+	  v20 /= v20.L2Norm();
+	  v21 /= v21.L2Norm();
+             
+	  double RR_tmp = v20.Dot(v21);
+      RR_tmp = acos(RR_tmp);
+
+	  //double tmp_dist004 =0.0;
+
+      double tmp_dist004 = edge_split*sin(0.5*RR_tmp)/sin(PI - 0.5*RR_temp - 0.5*RR_tmp); //later we need to update it by multiplying sin(0.5*RR_temp)
+
+      double tmp_dist114 = edge_split*sin(0.5*RR_temp)/sin(PI - 0.5*RR_temp - RR_tmp);
+
+	  //define "bechmark" and "min_edge" below
+
+	  Vector3d v22 = position2 + tmp_dist114*v20;
+
+      Vector3d v23 = v22 - next2->Start()->Position();
+
+      v23 /= v23.L2Norm();
+
+      Vector3d v24 = next2->Start()->Position() + tmp_dist004*v23;
+
+	  //next1->Start()->SetCur_pos007(v24); //WE NEED TO JUDGE WHETHER IT LIES INSIDE INSIDE THE CORRESPONDING SWEEPING AREA
+
+      //THE FOLLOWING IS WRONG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+
+	  //handle reflex angles only
+	  
+	  double x10 = next3->Start()->Cur_pos007().X();
+	  double y10 = next3->Start()->Cur_pos007().Y();
+
+	  double x11 = next3->End()->Cur_pos007().X();
+	  double y11 = next3->End()->Cur_pos007().Y();
+
+
+
+      if(normal0001.Z()> 0.0  && (v24.X() - x1)*(y2 - y1) - (v24.Y() - y1)*(x2 - x1) <0.0  && (v24.X() - x10)*(y1 - y10) - (v24.Y() - y10)*(x1 - x10) <0.0 && 
+          (v24.X() - x2)*(y11 - y2) - (v24.Y() - y2)*(x11 - x2) <0.0 && (v24.X() - x3)*(y4 - y3) - (v24.Y() - y3)*(x4 - x3) <0.0 || normal0001.Z()< 0.0  && (v24.X() - x1)*(y2 - y1) - (v24.Y() - y1)*(x2 - x1) >0.0  && (v24.X() - x10)*(y1 - y10) - (v24.Y() - y10)*(x1 - x10) >0.0 && 
+          (v24.X() - x2)*(y11 - y2) - (v24.Y() - y2)*(x11 - x2) >0.0 && (v24.X() - x3)*(y4 - y3) - (v24.Y() - y3)*(x4 - x3) >0.0)//normal001.Z() Z > 0.0 && (xx_1 - x_1)*(y_3 - y_1) - (yy_1 - y_1)*(x_3 - x_1) <0 
+	  {
+      tmp_dist004 = tmp_dist004*sin(0.5*RR_temp); //update tmp_dist004
+
+	  if(next2->Start()->dist > tmp_dist004 || (next2->Start()->dist - tmp_dist004) < 0.00000000005) // update nex->Start()->dist
+		{ 
+		   next2->Start()->dist = tmp_dist004;
+		   next2->Start()->SetCur_pos001(v24); //WE NEED TO JUDGE WHETHER IT LIES INSIDE INSIDE THE CORRESPONDING SWEEPING AREA
+		   next2->Start()->event_type =1; //mark it as split event
+		   next2->Start()->SetSplit_Edge(next3);//mark the edge being split
+		   
+		   if (benchmark > next2->Start()->dist)
+              {  benchmark = next2->Start()->dist;
+min_edge = next2->Twin();
+		   }
+	  }
+	  }
+
+}//if(next3->Twin()->LeftFace() == NULL)
+	 
+
+
+
+//detect 
+if(next3->Twin()->LeftFace() != NULL)
+{
+	 
+double x_1m = next2->Start()->Position().X();
+double y_1m = next2->Start()->Position().Y();
+double z_1m = next2->Start()->Position().Z();
+
+	  double x_2m = next2->Start()->Cur_pos007().X();
+	  double y_2m = next2->Start()->Cur_pos007().Y();
+	  double z_2m = next2->Start()->Cur_pos007().Z();
+
+	  double x_3m = next3->Start()->Position().X();
+	  double y_3m = next3->Start()->Position().Y();
+	  double z_3m = next3->Start()->Position().Z();
+
+	  double x_4m = next3->End()->Position().X();
+	  double y_4m = next3->End()->Position().Y();
+	  double z_4m = next3->End()->Position().Z();
+
+	  double xx_1m = x_1m+(x_1m-x_2m)*(((y_1m-y_3m)*(x_3m-x_4m)-(y_3m-y_4m)*(x_1m-x_3m))/((y_3m-y_4m)*(x_1m-x_2m)-(x_3m-x_4m)*(y_1m-y_2m)));
+
+	  double yy_1m = y_1m+(y_1m-y_2m)*(((y_1m-y_3m)*(x_3m-x_4m)-(y_3m-y_4m)*(x_1m-x_3m))/((y_3m-y_4m)*(x_1m-x_2m)-(x_3m-x_4m)*(y_1m-y_2m)));
+
+	  double zz_1m = z_1m+(z_1m-z_2m)*(((y_1m-y_3m)*(x_3m-x_4m)-(y_3m-y_4m)*(x_1m-x_3m))/((y_3m-y_4m)*(x_1m-x_2m)-(x_3m-x_4m)*(y_1m-y_2m)));
+
+	  Vector3d position_1m(xx_1m, yy_1m, zz_1m);
+	  const Vector3d & pos001m = next3->Start()->Position();
+	  const Vector3d & pos002m = next3->End()->Position();
+
+	  const Vector3d & pos_intersection = next2->Start()->Position();
+
+
+
+	  Vector3d v_dm1 = pos002m - pos001m;
+      Vector3d v_dm2 = position_1m - pos001m;
+	  Vector3d v_dm3 = pos002m - position_1m;
+      Vector3d v_intersection = position_1m - pos_intersection;
+
+
+	  
+	  if(v_dm1.L2Norm() == v_dm2.L2Norm() + v_dm3.L2Norm() && normal001.Z() > 0.0 && (xx_1m - x_1m)*(y_2m - y_1m) - (yy_1m - y_1m)*(x_2m - x_1m) <0  || 
+		  v_dm1.L2Norm() == v_dm2.L2Norm() + v_dm3.L2Norm() && normal001.Z() < 0.0 && (xx_1m - x_1m)*(y_2m - y_1m) - (yy_1m - y_1m)*(x_2m - x_1m) >0 ) 
+	  {
+	   	double tmp_dist005m = v_intersection.L2Norm()*sin(0.5*(next2->Start()->sum_angle));
+      	  
+	    if(next2->Start()->dist > tmp_dist005m || (next1->Start()->dist - tmp_dist005m) < 0.00000000005) // update nex->Start()->dist
+		{ 
+		   next2->Start()->dist = tmp_dist005m;
+		   next2->Start()->SetCur_pos(position_1m); //WE NEED TO JUDGE WHETHER IT LIES INSIDE INSIDE THE CORRESPONDING SWEEPING AREA
+		   next2->Start()->event_type =10; //mark it as edge event
+		   
+		   if (benchmark > next2->Start()->dist)
+              {  benchmark = next2->Start()->dist;
+                 min_edge = next2->Twin();
+		      }
+	    }
+	  
+	  
+	  }
+	 
+
+	 
+}//if(next3->Twin()->LeftFace() != NULL)
+      next3 =  next3->Next();
+	  cnt1 =1;
+
+	  if(next3 == next2->Prev() && cnt1 ==1)
+	  {break;}
+
+	}//while(next3)
+
+	}//end if
+    
+	next2 =  next2->Next();
+	
+	cnt =1;
+
+	if(next2 == curr && cnt ==1)
+	  {break;}
+	}//while(next2)
+   
+    curr =curr->Next();
+	countt = 1;
+	if(curr == cc[k] && countt ==1)
+	{break;}
+
+}//end traversing the current loop
+
+/***********the end of Detecting split events ************/
+
+/***********the start of Detecting edge events************/
+  int countt2 = 0;
+  curr = cc[k];
+  //for (size_t i=0; i< bheList.size(); i++)
+  while (curr)
+  {
+	HEdge *next1=curr->Twin();
+
+
+	const Vector3d & pos001 = next1->Start()->Position();
+    const Vector3d & pos002 = next1->End()->Position();
+	const Vector3d & pos003 = next1->Next()->End()->Position();
+	Vector3d normal001 = (pos002-pos001).Cross(pos003-pos001);
+	
+
+	int cnt2 = 0;
+	while(next1)
+	{
+ 
+    //double tmp_dist004 =0.0;//initialize the dist
+	next1->Start()->dist =100000000000.0;
+
+	//neiboring bisector intersection computation
+	if(next1->Twin()->LeftFace()==NULL && next1->Prev()->Twin()->LeftFace()==NULL && next1->Next()->Twin()->LeftFace()==NULL )
+	{
+
+	  //next1->Start()->Position()   next1->Start()->Cur_pos007  next1->End()->Position()   next1->End()->Cur_pos007
+
+	  double x_1 = next1->Start()->Position().X();
+	  double y_1 = next1->Start()->Position().Y();
+
+
+	  double z_1 = next1->Start()->Position().Z();
+
+	  double x_2 = next1->Start()->Cur_pos007().X();
+	  double y_2 = next1->Start()->Cur_pos007().Y();
+	  double z_2 = next1->Start()->Cur_pos007().Z();
+
+	  double x_3 = next1->End()->Position().X();
+	  double y_3 = next1->End()->Position().Y();
+
+
+	  double z_3 = next1->End()->Position().Z();
+
+	  double x_4 = next1->End()->Cur_pos007().X();
+	  double y_4 = next1->End()->Cur_pos007().Y();
+	  double z_4 = next1->End()->Cur_pos007().Z();
+
+	  double xx_1 = x_1+(x_1-x_2)*(((y_1-y_3)*(x_3-x_4)-(y_3-y_4)*(x_1-x_3))/((y_3-y_4)*(x_1-x_2)-(x_3-x_4)*(y_1-y_2)));
+
+	  double yy_1 = y_1+(y_1-y_2)*(((y_1-y_3)*(x_3-x_4)-(y_3-y_4)*(x_1-x_3))/((y_3-y_4)*(x_1-x_2)-(x_3-x_4)*(y_1-y_2)));
+
+	  double zz_1 = z_1+(z_1-z_2)*(((y_1-y_3)*(x_3-x_4)-(y_3-y_4)*(x_1-x_3))/((y_3-y_4)*(x_1-x_2)-(x_3-x_4)*(y_1-y_2)));
+	
+	  
+	  if(normal001.Z() > 0.0 && (xx_1 - x_1)*(y_3 - y_1) - (yy_1 - y_1)*(x_3 - x_1) <0  || 
+		  normal001.Z() < 0.0 && (xx_1 - x_1)*(y_3 - y_1) - (yy_1 - y_1)*(x_3 - x_1) >0 ) //ON THE LRFT OF THE DIRECTED EDGE (p0.x - p1.x)*(p3.y - p1.y) - (p0.y - p1.y)*(p3.x - p1.x);	  
+	  {
+
+	  Vector3d position_1(xx_1, yy_1, zz_1);
+      
+	  Vector3d v25 = position_1 - next1->Start()->Position();
+	  Vector3d v26 =  v25/v25.L2Norm();
+
+	  Vector3d v27 = next1->End()->Position() - next1->Start()->Position();
+	  Vector3d v28 = v27/v27.L2Norm();
+             
+	  double R_R_tmp = v26.Dot(v28);
+      R_R_tmp = acos(R_R_tmp);
+
+	  //handle edge events
+	  double tmp_dist005 = (v25.L2Norm())*sin(R_R_tmp);
+      	  
+	  if(next1->Start()->dist > tmp_dist005 || (next1->Start()->dist - tmp_dist005) < 0.00000000005) // update nex->Start()->dist
+		{ 
+		   next1->Start()->dist = tmp_dist005;
+		   next1->Start()->SetCur_pos002(position_1); //WE NEED TO JUDGE WHETHER IT LIES INSIDE INSIDE THE CORRESPONDING SWEEPING AREA
+		   next1->Start()->event_type =2; //mark it as edge event
+		   
+		   if (benchmark > next1->Start()->dist)
+              {  benchmark = next1->Start()->dist;
+                 min_edge = next1->Twin();
+		   }
+	  }
+
+	  }
+
+	}//end if
+    
+	next1 =  next1->Next();
+	cnt2 = 1;
+
+	if(next1 == curr->Twin() && cnt2 == 1)
+	  {break;}
+	}//while(next1)
+
+    curr = curr->Next();
+	countt2 = 1;
+	if(curr == cc[k] && countt2 ==1)
+	{break;}
+
+  }//end for
+
+/***********the end of detecting edge events************/
+
+
+
+
+
+  if(min_edge->Start()->event_type == 0 || min_edge->Start()->event_type == 10 )
+  {    
+     //to be filled
+	 HEdge *current= NULL;
+     Vertex *vv101 = NULL;
+     HEdge *nextvv = NULL;
+
+     if(min_edge->Start()->event_type == 0)
+	 {     
+	   current=min_edge;
+       vv101 = current->Off_pos();//to be filled
+       nextvv = current->Twin()->Next()->Twin()->Next();
+	 }
+	 else//if(min_edge->Start()->event_type == 10)
+	 {
+	   current=min_edge;
+       nextvv = current->Twin()->Next();
+
+	   const Vector3d & posxx100 = nextvv->End();
+       const Vector3d & posxx101 = nextvv->Start();
+      
+       Vector3d xx100 = posxx100 - posxx101;
+       xx100 /= xx100.L2Norm();
+       Vector3d new_posxx100 = (benchmark/sin(nextvv->angle))*xx100 + posxx101;
+
+       vv101->SetPosition(new_posxx100);
+       nextvv->SetOff_pos(vv101);
+	   nextvv = nextvv->Twin()->Next();//reset nextvv
+ 
+	 }
+
+
+    
+  HEdge *vve1 =NULL;
+  HEdge *vve2 =NULL;
+  HEdge *vve3 =NULL;
+  HEdge *vve4 =NULL;
+  HEdge *vve5 =NULL;
+  HEdge *vve6 =NULL;
+
+  //process bisector
+  if(fabs(nextvv->Start()->sum_angle- PI) > 0.000005 && (nextvv->Start()->sum_angle - nextvv->angle) > 0.5*nextvv->Start()->sum_angle &&  nextvv->Prev()->Twin()->angle < 0.5*nextvv->Start()->sum_angle)
+  {
+  const Vector3d & posbb100 = nextvv->Start()->Cur_pos007();
+  const Vector3d & posbb101 = nextvv->Start();
+      
+  Vector3d bb100 = posbb100 - posbb101;
+  bb100 /= bb100.L2Norm();
+  Vector3d new_posbb100 = (benchmark/sin(0.5*nextvv->Start()->sum_angle))*bb100 + posbb101;
+  Vertex *bb102 = NULL;
+  bb102->SetPosition(new_posbb100);
+  nextvv->SetOff_pos(bb102);
+
+  //write the data into the files
+  outfile1 <<bb102->Position().X()<< "  " << bb102->Position().Y()<< "  " << bb102->Position().Z()<< "  ";
+  outfile2 << nextvv->Start().X()<< "  " << nextvv->Start().Y()<< "  " << nextvv->Start().Z()<< "  ";
+
+
+  const Vector3d & posv_v100 = nextvv->End();
+  const Vector3d & posv_v101 = nextvv->Start();
+      
+  Vector3d v_v100 = posv_v100 - posv_v101;
+  v_v100 /= v_v100.L2Norm();
+  Vector3d new_posv_v100 = (benchmark/sin(nextv_v->angle))*v_v100 + posv_v101;
+  Vertex *v_v102 = NULL;
+  v_v102->SetPosition(new_posv_v100);
+  nextvv->SetOff_pos(v_v102);
+
+
+  if(min_edge->Start()->event_type == 0)
+  vve1 = nextvv->Prev()->Prev();
+  else
+  {
+	vve1->SetStart(nextvv->Prev()->Start());
+	SetPrevNext(nextvv->Prev()->Prev(), vve1);
+  }
+
+
+  vve2->SetStart(bb102);
+  vve5->SetStart(vv101);
+  vve6->SetStart(bb102);
+  vve3->SetStart(v_v102);
+  vve4->SetStart(v_v102);
+  vve2->SetTwin(vve4);
+  vve4->SetTwin(vve2);
+  vve5->SetTwin(vve6);
+  vve6->SetTwin(vve5);
+
+  SetPrevNext(vve1, vve5);
+  SetPrevNext(vve5, vve2);
+  SetPrevNext(vve2, vve3);
+  SetPrevNext(vve3, nextvv->Next());
+  SetPrevNext(vve4, vve6);
+
+  //set faces
+  vve4->SetFace(NULL);
+  vve6->SetFace(NULL);
+  vve1->SetFace(nextvv->LeftFace());
+  vve5->SetFace(nextvv->LeftFace());
+  vve2->SetFace(nextvv->LeftFace());
+  vve3->SetFace(nextvv->LeftFace());
+  
+  
+  }
+  else
+  {
+  if(nextvv != current->Prev()->Twin())
+  {
+  const Vector3d & posvv100 = nextvv->End();
+  const Vector3d & posvv101 = nextvv->Start();
+      
+  Vector3d vv100 = posvv100 - posvv101;
+  vv100 /= vv100.L2Norm();
+  Vector3d new_posvv100 = (benchmark/sin(nextvv->angle))*vv100 + posvv101;
+  Vertex *vv102 = NULL;
+  vv102->SetPosition(new_posvv100);
+  nextvv->SetOff_pos(vv102);
+
+  //HEdge *vve1 =NULL;
+  //HEdge *vve2 =NULL;
+  //HEdge *vve3 =NULL;
+  //HEdge *vve4 =NULL;
+
+  if(min_edge->Start()->event_type == 0)
+  {
+	vve1 = nextvv->Prev()->Prev();
+    vve2->SetStart(vv101);
+  }
+  else
+  {
+	vve1->SetStart(nextvv->Prev()->Start());
+	SetPrevNext(nextvv->Prev()->Prev(), vve1);
+	vve2->SetStart(nextvv->Prev()->Off_pos());
+  }
+
+  
+  vve3->SetStart(vv102);
+  vve4->SetStart(vv102);
+  vve2->SetTwin(vve4);
+  vve4->SetTwin(vve2);
+
+  SetPrevNext(vve1, vve2);
+  SetPrevNext(vve2, vve3);
+  SetPrevNext(vve3, nextvv->Next());
+
+  //set faces
+  vve1->SetFace(nextvv->LeftFace());
+  vve2->SetFace(nextvv->LeftFace());
+  vve3->SetFace(nextvv->LeftFace());
+  vve4->SetFace(NULL);
+  }
+  
+  }
+  
+
+  HEdge *prepare_e3 = vve3;//initialize the mark of the last edge
+  HEdge *prepare_e4 = vve4;//initialize the mark of the last edge
+
+
+  //above we initialize the setup
+
+  while(current)
+  {
+    
+   
+   while(nextvv)
+   {
+     if(nextvv == current->Prev()->Twin() || nextvv->Twin()->Next() == current->Prev()->Twin() || nextvv->Twin()->Next() == current)
+	 break;
+
+     HEdge *e1 =NULL;
+     HEdge *e2 =NULL;
+     HEdge *e3 =NULL;
+     HEdge *e4 =NULL;
+	 HEdge *e5 =NULL;
+     HEdge *e6 =NULL;
+
+	 nextvv = nextvv->Twin()->Next();
+
+
+
+  //process bisector
+  if(fabs(nextvv->Start()->sum_angle- PI) > 0.000005 && (nextvv->Start()->sum_angle - nextvv->angle) > 0.5*nextvv->Start()->sum_angle &&  nextvv->Prev()->Twin()->angle < 0.5*nextvv->Start()->sum_angle)
+  {
+  const Vector3d & posnn100 = nextvv->Start()->Cur_pos007();
+  const Vector3d & posnn101 = nextvv->Start();
+      
+  Vector3d nn100 = posnn100 - posnn101;
+  nn100 /= nn100.L2Norm();
+  Vector3d new_posnn100 = (benchmark/sin(0.5*nextvv->Start()->sum_angle))*nn100 + posnn101;
+  Vertex *nn102 = NULL;
+  nn102->SetPosition(new_posnn100);
+  nextvv->SetOff_pos(nn102);
+
+//TEST:: new_posnn100.X() == ?? nn102->Position().X()
+
+  //write into the files
+  outfile1 <<nn102->Position().X()<< "  " << nn102->Position().Y()<< "  " << nn102->Position().Z()<< "  ";
+  outfile2 << nextvv->Start().X()<< "  " << nextvv->Start().Y()<< "  " << nextvv->Start().Z()<< "  ";
+
+  const Vector3d & posv_v100n = nextvv->End();
+  const Vector3d & posv_v101n = nextvv->Start();
+      
+  Vector3d v_v100n = posv_v100n - posv_v101n;
+  v_v100n /= v_v100n.L2Norm();
+  Vector3d new_posv_v100n = (benchmark/sin(nextv_v->angle))*v_v100n + posv_v101n;
+  Vertex *v_v102n = NULL;
+  v_v102n->SetPosition(new_posv_v100n);
+  nextvv->SetOff_pos(v_v102n);
+
+  
+  e1->SetStart(nextvv->Prev()->Start());
+  e2->SetStart(nn102); 
+  e6->SetStart(nn102);
+  e5->SetStart(nextvv->Prev()->Twin()->Off_pos());
+  e3->SetStart(v_v102n);
+  e4->SetStart(v_v102n);
+  e2->SetTwin(vve4);
+  e4->SetTwin(vve2);
+  e5->SetTwin(vve6);
+  e6->SetTwin(vve5);
+
+  SetPrevNext(nextvv->Prev()->Prev(), e1);
+  SetPrevNext(e1, e5);
+  SetPrevNext(e5, e2);
+  SetPrevNext(e2, e3);
+  SetPrevNext(e3, nextvv->Next());
+  SetPrevNext(vve4, vve6);
+
+  //set faces
+  e4->SetFace(NULL);
+  e6->SetFace(NULL);
+  e1->SetFace(nextvv->LeftFace());
+  e5->SetFace(nextvv->LeftFace());
+  e2->SetFace(nextvv->LeftFace());
+  e3->SetFace(nextvv->LeftFace());
+  }
+  else
+  {
+     const Vector3d & posmm100 = nextvv->End();
+     const Vector3d & posmm101 = nextvv->Start();
+      
+     Vector3d mm100 = posmm100 - posmm101;
+     mm100 /= mm100.L2Norm();
+     Vector3d new_posmm100 = (benchmark/sin(nextvv->angle))*mm100 + posmm101;
+     Vertex *mm102 = NULL;
+     mm102->SetPosition(new_posmm100);
+     nextvv->SetOff_pos(mm102);
+
+     e1->SetStart(nextvv->Prev()->Start());
+     e2->SetStart(nextvv->Prev()->Twin()->Off_pos());
+     e3->SetStart(mm102);
+     e4->SetStart(mm102);
+     e2->SetTwin(e4);
+     e4->SetTwin(e2);
+
+	 SetPrevNext(nextvv->Prev()->Prev(), e1);
+     SetPrevNext(e1, e2);
+     SetPrevNext(e2, e3);
+     SetPrevNext(e3, nextvv->Next());
+
+	 //connect to the previous wedge
+     e1->SetTwin(prepare_e3);
+	 prepare_e3->SetTwin(e1);
+     SetPrevNext(e4, prepare_e4);
+
+	 //reset preparation edge e3 and e4
+	 prepare_e3 = e3;
+	 prepare_e4 = e4;
+
+     //set faces
+     e1->SetFace(nextvv->LeftFace());
+     e2->SetFace(nextvv->LeftFace());
+     e3->SetFace(nextvv->LeftFace());
+     e4->SetFace(NULL);
+  
+  }
+
+   
+   }
+  
+  
+   current = current->Prev();//reset current
+   nextvv = current->Twin()->Next();//reset nextvv
+   if(current == min_edge)
+	   break;
+  
+  }
+
+  SetPrevNext(vve4, prepare_e4);
+
+    if(min_edge->Start()->event_type == 0 && min_edge->Twin()->Next()->Twin()->Prev()->Start() != prepare_e3->End())
+  {  
+	vve1->SetTwin(min_edge->Twin()->Next()->Twin()->Prev()->Twin());
+    min_edge->Twin()->Next()->Twin()->Prev()->Twin()->SetTwin(vve1);
+
+    prepare_e3->SetTwin(min_edge->Twin()->Prev()->Twin()->Next()->Twin());
+	min_edge->Twin()->Prev()->Twin()->Next()->Twin()->SetTwin(prepare_e3);    
+	
+  }
+	else
+  {  
+    vve1->SetTwin(prepare_e3);
+	prepare_e3->SetTwin(vve1);
+  }
+   //reset cc[k]
+   cc[k] = prepare_e4;
+
+	// delete the old boundary structure below
+  
+  current == min_edge
+   while(current)
+  {
+    
+   nextvv = current->Twin()->Next();
+   nextvv->SetPrev(NULL);
+   while(nextvv)
+   {
+     if(nextvv == current->Prev()->Twin())
+	 break;
+
+	 nextvv = nextvv->Twin()->Next();
+
+     nextvv->Prev()->Twin() = NULL;
+     nextvv->Prev() = NULL;
+   }
+     
+     current = current->Prev();//reset current
+     //nextvv = current->Twin()->Next();//we have set it earlier
+     if(current == min_edge)
+	   break;
+   }
+
+   //delete the remaining boundary loop and its twin edge
+
+  current == min_edge;
+  current->Twin()=NULL;
+  current = current->Prev()->Prev();
+   while(current)
+  {
+    
+     current->Next()->Twin() = NULL;
+	 current->Next()= NULL;
+     current = current->Prev();//reset current
+     if(current == min_edge)
+	   break;
+   }
+  
+  current = NULL;
+
+  
+  }//if(min_edge->Start()->event_type == 0 || min_edge->Start()->event_type == 10 )
+
+  //process split events
+  else if(min_edge->Start()->event_type == 1)
+  {    
+    //store the SS segments
+	outfile1 << min_edge->Start()->Cur_pos001().X()<< "  " << min_edge->Start()->Cur_pos001().Y()<< "  " << min_edge->Start()->Cur_pos001().Z()<< "  ";
+	outfile2 << min_edge->Start().X()<< "  " << min_edge->Start().Y()<< "  " << min_edge->Start().Z()<< "  ";
+    //split the loop into two
+
+	  double x3a = min_edge->Twin()->Start()->Position().X();
+	  double y3a = min_edge->Twin()->Start()->Position().Y();
+	  double z3a = min_edge->Twin()->Start()->Position().Z();
+
+	  double x4a = min_edge->Twin()->End()->Position().X();
+	  double y4a = min_edge->Twin()->End()->Position().Y();
+	  double z4a = min_edge->Twin()->End()->Position().Z();
+
+	  double x1a = min_edge->Twin()->Start()->Split_Edge()->Start()->Position().X();
+	  double y1a = min_edge->Twin()->Start()->Split_Edge()->Start()->Position().Y();
+	  double z1a = min_edge->Twin()->Start()->Split_Edge()->Start()->Position().Z();
+
+	  double x2a = min_edge->Twin()->Start()->Split_Edge()->End()->Position().X();
+	  double y2a = min_edge->Twin()->Start()->Split_Edge()->End()->Position().Y();
+	  double z2a = min_edge->Twin()->Start()->Split_Edge()->End()->Position().Z();
+
+	  double xx1a = x1a+(x1a-x2a)*(((y1a-y3a)*(x3a-x4a)-(y3a-y4a)*(x1a-x3a))/((y3a-y4a)*(x1a-x2a)-(x3a-x4a)*(y1a-y2a)));
+
+	  double yy1a = y1a+(y1a-y2a)*(((y1a-y3a)*(x3a-x4a)-(y3a-y4a)*(x1a-x3a))/((y3a-y4a)*(x1a-x2a)-(x3a-x4a)*(y1a-y2a)));
+
+	  double zz1a = z1a+(z1a-z2a)*(((y1a-y3a)*(x3a-x4a)-(y3a-y4a)*(x1a-x3a))/((y3a-y4a)*(x1a-x2a)-(x3a-x4a)*(y1a-y2a)));
+
+	  //t=(y13*x34-y34*x13)/(y34*x12-x34*y12)
+
+
+	  double x5a = min_edge->Twin()->Prev()->Start()->Position().X();
+	  double y5a = min_edge->Twin()->Prev()->Start()->Position().Y();
+	  double z5a = min_edge->Twin()->Prev()->Start()->Position().Z();
+
+	  double xx2a = x1a+(x1a-x2a)*(((y1a-y3a)*(x3a-x5a)-(y3a-y5a)*(x1a-x3a))/((y3a-y5a)*(x1a-x2a)-(x3a-x5a)*(y1a-y2a)));
+
+	  double yy2a = y1a+(y1a-y2a)*(((y1a-y3a)*(x3a-x5a)-(y3a-y5a)*(x1a-x3a))/((y3a-y5a)*(x1a-x2a)-(x3a-x5a)*(y1a-y2a)));
+
+	  double zz2a = z1a+(z1a-z2a)*(((y1a-y3a)*(x3a-x5a)-(y3a-y5a)*(x1a-x3a))/((y3a-y5a)*(x1a-x2a)-(x3a-x5a)*(y1a-y2a)));
+
+      Vector3d position1a(xx1a, yy1a, zz1a);
+
+	  Vector3d position2a(xx2a, yy2a, zz2a);
+
+
+	  //handle one corner
+	  Vertex *vxx1 = NULL;
+	  vxx1->SetPosition(position1a);
+
+	  
+      HEdge *exx1 =NULL;
+	  HEdge *eyy1 =NULL;
+	  exx1->SetStart(vxx1);
+	  eyy1->SetStart(min_edge->Twin()->Start()->Split_Edge()->Start());
+	  exx1->SetTwin(eyy1);
+	  eyy1->SetTwin(exx1);
+
+	  HEdge *exx2 =NULL;
+	  HEdge *eyy2 =NULL;
+	  exx2->SetStart(vxx1);
+	  eyy2->SetStart(min_edge->Start());
+	  exx2->SetTwin(eyy2);
+	  eyy2->SetTwin(exx2);
+
+
+	  SetPrevNext(exx1, min_edge->Twin()->Start()->Split_Edge()->Prev()->Twin());
+	  SetPrevNext(eyy2,exx1);
+	  SetPrevNext(min_edge->Prev(),eyy2);
+
+	  SetPrevNext(exx1->Next()->Twin(), eyy1);
+	  SetPrevNext(eyy1,exx2);
+	  SetPrevNext(exx2,eyy2->Prev()->Twin());
+
+      //handle the other corner
+	  Vertex *vxx2 = NULL;
+	  vxx2->SetPosition(position2a);
+	    
+      HEdge *exx_1 =NULL;
+	  HEdge *eyy_1 =NULL;
+	  exx_1->SetStart(min_edge->Twin()->Start()->Split_Edge()->End());
+	  eyy_1->SetStart(vxx2);
+	  exx_1->SetTwin(eyy_1);
+	  eyy_1->SetTwin(exx_1);
+
+	  HEdge *exx_2 =NULL;
+	  HEdge *eyy_2 =NULL;
+	  exx_2->SetStart(min_edge->Next()->End());
+	  eyy_2->SetStart(vxx2);
+	  exx_2->SetTwin(eyy_2);
+	  eyy_2->SetTwin(exx_2);
+
+
+	  SetPrevNext(min_edge->Next()->Next()->Twin(), exx_2);
+	  SetPrevNext(exx_2, eyy_1);
+	  SetPrevNext(eyy_1, min_edge->Twin()->Start()->Split_Edge()->Next());
+
+	  SetPrevNext(eyy_1->Next()->Twin(), exx_1);
+	  SetPrevNext(exx_1,eyy_2);
+	  SetPrevNext(eyy_2,exx_2->Prev()->Twin());
+
+	  //set faces
+	  exx1->SetFace(NULL);
+	  exx_1->SetFace(NULL);
+	  eyy1->SetFace(eyy1->Prev()->LeftFace());
+	  eyy_1->SetFace(eyy_1->Next()->LeftFace());
+
+	  exx2->SetFace(exx2->Next()->LeftFace());
+	  exx_2->SetFace(exx_2->Prev()->LeftFace());
+	  eyy2->SetFace(NULL);
+	  eyy_2->SetFace(NULL);
+      
+	  //delete min_edge and its opposite edge
+      min_edge->Twin()->Start()->Split_Edge()->SetTwin(NULL);
+	  min_edge->Twin()->Start()->Split_Edge() = NULL;
+	  min_edge->Next()->SetTwin(NULL);
+	  min_edge->Next() = NULL;
+	  min_edge->SetTwin(NULL);
+	  min_edge = NULL;
+
+	  cc[k] = eyy2;
+	  cc[kk++] = eyy_2;
+ 
+  }
+
+  //process edge events
+  else if(min_edge->Start()->event_type == 2)
+  { 
+    //store the SS segments
+	outfile1 << min_edge->Start()->Cur_pos002().X()<< "  " << min_edge->Start()->Cur_pos002().Y()<< "  " << min_edge->Start()->Cur_pos002().Z()<< "  ";
+	outfile2 << min_edge->Start().X()<< "  " << min_edge->Start().Y()<< "  " << min_edge->Start().Z()<< "  ";
+
+	outfile1 << min_edge->Start()->Cur_pos002().X()<< "  " << min_edge->Start()->Cur_pos002().Y()<< "  " << min_edge->Start()->Cur_pos002().Z()<< "  ";
+	outfile2 << min_edge->End().X()<< "  " << min_edge->End().Y()<< "  " << min_edge->End().Z()<< "  ";
+
+	//reconnect the links
+
+	double x_10 = min_edge->Prev()->Start()->Position().X();
+	double y_10 = min_edge->Prev()->Start()->Position().Y();
+	double z_10 = min_edge->Prev()->Start()->Position().Z();
+
+	double x_20 = min_edge->Prev()->End()->Position().X();
+	double y_20 = min_edge->Prev()->End()->Position().Y();
+	double z_20 = min_edge->Prev()->End()->Position().Z();
+
+	double x_30 = min_edge->Next()->Start()->Position().X();
+	double y_30 = min_edge->Next()->Start()->Position().Y();
+	double z_30 = min_edge->Next()->Start()->Position().Z();
+
+	double x_40 = min_edge->Next()->End()->Position().X();
+	double y_40 = min_edge->Next()->End()->Position().Y();
+    double z_40 = min_edge->Next()->End()->Position().Z();
+
+	double xx_10 = x_10+(x_10-x_20)*(((y_10-y_30)*(x_30-x_40)-(y_30-y_40)*(x_10-x_30))/((y_30-y_40)*(x_10-x_20)-(x_30-x_40)*(y_10-y_20)));
+	double yy_10 = y_10+(y_10-y_20)*(((y_10-y_30)*(x_30-x_40)-(y_30-y_40)*(x_10-x_30))/((y_30-y_40)*(x_10-x_20)-(x_30-x_40)*(y_10-y_20)));
+	double zz_10 = z_10+(z_10-z_20)*(((y_10-y_30)*(x_30-x_40)-(y_30-y_40)*(x_10-x_30))/((y_30-y_40)*(x_10-x_20)-(x_30-x_40)*(y_10-y_20)));
+
+	//t=(y13*x34-y34*x13)/(y34*x12-x34*y12) 
+
+
+	Vector3d new_edge = (xx_10, yy_10, zz_10);
+	Vertex *v_edge = NULL;
+	v_edge->SetPosition(new_edge);
+
+	min_edge->Twin()->Next()->SetStart(v_edge);//set starting vertex
+	min_edge->Next()->SetStart(v_edge);//set starting vertex
+
+	SetPrevNext(min_edge->Twin()->Prev(), min_edge->Twin()->Next());
+	SetPrevNext(min_edge->Prev(), min_edge->Next());
+
+	//reset cc[k]
+    cc[k] = min_edge->Next();
+	//delete min_edge
+	min_edge->Twin() = NULL;
+	min_edge = NULL;
+  
+  }
+
+
+    if(cur->Next()->Next() == cur->Prev())//process the laxt triangle
+	{
+	outfile1 << cur->Start()->Cur_pos002().X()<< "  " << cur->Start()->Cur_pos002().Y()<< "  " << cur->Start()->Cur_pos002().Z()<< "  ";
+	outfile2 << cur->Start()->Position().X()<< "  " << cur->Start()->Position().Y()<< "  " << cur->Start()->Position().Z()<< "  ";
+	
+    outfile1 << cur->Next()->Start()->Cur_pos002().X()<< "  " << cur->Next()->Start()->Cur_pos002().Y()<< "  " << cur->Next()->Start()->Cur_pos002().Z()<< "  ";
+	outfile2 << cur->Next()->Start()->Position().X()<< "  " << cur->Next()->Start()->Position().Y()<< "  " << cur->Next()->Start()->Position().Z()<< "  ";
+	
+    outfile1 << cur->Prev()->Start()->Cur_pos002().X()<< "  " << cur->Prev()->Start()->Cur_pos002().Y()<< "  " << cur->Prev()->Start()->Cur_pos002().Z()<< "  ";
+	outfile2 << cur->Prev()->Start()->Position().X()<< "  " << cur->Prev()->Start()->Position().Y()<< "  " << cur->Prev()->Start()->Position().Z()<< "  ";	
+	  
+	k++;
+
+	}
+	if(k> kk)//break condition
+	{break;}
+  
+
+}//while(1)
+
+
+  //close the files  
+   outfile1.close();  
+   outfile2.close();
