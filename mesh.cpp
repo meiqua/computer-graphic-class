@@ -6,6 +6,9 @@
 #include <fstream>
 #include <cmath>
 #include <float.h>
+#include <queue>
+#include <list>
+#include <time.h> 
 using namespace std;
 
 /////////////////////////////////////////
@@ -200,8 +203,11 @@ int Mesh::CountBoundaryLoops()
 
 }
 
-int Mesh::CountConnectedComponents()
+int Mesh::CountConnectedComponents_naive()
 {
+clock_t  clockBegin, clockEnd;
+clockBegin = clock();
+
 int no_component =0;
 
 FaceList validFaces;
@@ -228,17 +234,25 @@ vector<int> union_find(validFaces.size());
 for (size_t i = 0; i < union_find.size(); i++) {
 	union_find[i] = i;
 }
+
+// naive method, O(n**2) n=valid faces size
 for (size_t i = 0; i < validFaces.size() - 1; i++) {
 	int parent = i;
 	int child;
 	for (size_t i1 = i + 1; i1 < validFaces.size(); i1++) {
 		// if have same vertex, regard as connection
-		Vertex* v11 = validFaces[i]->HalfEdge()->Start();
-		Vertex* v12 = validFaces[i]->HalfEdge()->Next()->Start();
-		Vertex* v13 = validFaces[i]->HalfEdge()->Next()->Next()->Start();
-		Vertex* v21 = validFaces[i1]->HalfEdge()->Start();
-		Vertex* v22 = validFaces[i1]->HalfEdge()->Next()->Start();
-		Vertex* v23 = validFaces[i1]->HalfEdge()->Next()->Next()->Start();
+		//Vertex* v11 = validFaces[i]->HalfEdge()->Start();
+		//Vertex* v12 = validFaces[i]->HalfEdge()->Next()->Start();
+		//Vertex* v13 = validFaces[i]->HalfEdge()->Next()->Next()->Start();
+		//Vertex* v21 = validFaces[i1]->HalfEdge()->Start();
+		//Vertex* v22 = validFaces[i1]->HalfEdge()->Next()->Start();
+		//Vertex* v23 = validFaces[i1]->HalfEdge()->Next()->Next()->Start();
+		HEdge* v11 = validFaces[i]->HalfEdge();
+		HEdge* v12 = validFaces[i]->HalfEdge()->Next();
+		HEdge* v13 = validFaces[i]->HalfEdge()->Next()->Next();
+		HEdge* v21 = validFaces[i1]->HalfEdge()->Twin();
+		HEdge* v22 = validFaces[i1]->HalfEdge()->Next()->Twin();
+		HEdge* v23 = validFaces[i1]->HalfEdge()->Next()->Next()->Twin();
 		if ((v11 == v21 || v11 == v22 || v11 == v23) ||
 			(v12 == v21 || v12 == v22 || v12 == v23) ||
 			(v13 == v21 || v13 == v22 || v13 == v23)) {
@@ -249,8 +263,8 @@ for (size_t i = 0; i < validFaces.size() - 1; i++) {
 				passBy.push_back(child);
 				child = union_find[child];
 			}
-			for (size_t i11 = i + 1; i11 < passBy.size(); i11++) {
-				union_find[passBy[i]] = child;
+			for (size_t i11 = 0; i11 < passBy.size(); i11++) {
+				union_find[passBy[i11]] = child;
 			}
 			passBy.clear();
 			while (parent != union_find[parent]) //find parent root
@@ -258,8 +272,8 @@ for (size_t i = 0; i < validFaces.size() - 1; i++) {
 				passBy.push_back(parent);
 				parent = union_find[parent];
 			}
-			for (size_t i11 = i + 1; i11 < passBy.size(); i11++) {
-				union_find[passBy[i]] = parent;
+			for (size_t i11 = 0; i11 < passBy.size(); i11++) {
+				union_find[passBy[i11]] = parent;
 			}
 			union_find[child] = parent;
 		}
@@ -270,10 +284,183 @@ for (size_t i = 0; i < union_find.size(); i++) {
 		no_component++;
 	}
 }
-
+clockEnd = clock();
+cout << "caculated in: " << clockEnd - clockBegin << " ms" << endl;
 cout << "number of Connected components: " << no_component <<endl;
 return no_component;
 }
+
+int Mesh::CountConnectedComponents()
+{
+	cout << "naive method: " << endl;
+	CountConnectedComponents_naive();
+
+	cout << "----------------" << endl;
+	cout << "BFS method:" << endl;
+	clock_t  clockBegin, clockEnd;
+	clockBegin = clock();
+
+
+	int no_component = 0;
+	int validfSize = 0;
+	Face* seedFace=nullptr;
+	for (size_t i = 0; i<fList.size(); i++) {
+		if (fList[i] != NULL && fList[i]->HalfEdge()->LeftFace() != NULL)
+		{
+			Face *f = fList[i];
+			const Vector3d & pos1 = f->HalfEdge()->Start()->Position();
+			const Vector3d & pos2 = f->HalfEdge()->End()->Position();
+			const Vector3d & pos3 = f->HalfEdge()->Next()->End()->Position();
+			Vector3d normal = (pos2 - pos1).Cross(pos3 - pos1);
+			normal /= normal.L2Norm();
+
+			f->SetNormal_f(normal);
+
+			HEdge* sEdge = f->HalfEdge();
+			sEdge->SetValid(false);
+			sEdge->Next()->SetValid(false);
+			sEdge->Next()->Next()->SetValid(false);
+
+
+			if (normal[1] < 0) {
+				validfSize++;
+				if (seedFace == nullptr) {
+					seedFace = f;
+				}
+			}
+		}
+	}
+	
+	FaceList validFaces;
+	vector<int> adjCounts(validfSize);
+
+	HEdge* seedEdge = seedFace->HalfEdge();
+	seedEdge->SetValid(true);
+	seedEdge->Next()->SetValid(true);
+	seedEdge->Next()->Next()->SetValid(true);
+	
+	queue<Face*> faceBFS;
+	faceBFS.push(seedFace);
+	vector<int> union_find(validfSize);
+	for (size_t i = 0; i < union_find.size(); i++) {
+		union_find[i] = i;
+	}
+
+	while (!faceBFS.empty()){
+		int parent=-1, child=-1;
+		Face* headFace = faceBFS.front();
+		HEdgeList validEdges;
+		validEdges.clear();
+		if (headFace->HalfEdge()->IsValid()) validEdges.push_back(headFace->HalfEdge());
+		if (headFace->HalfEdge()->Next()->IsValid()) validEdges.push_back(headFace->HalfEdge()->Next());
+		if (headFace->HalfEdge()->Next()->Next()->IsValid()) validEdges.push_back(headFace->HalfEdge()->Next()->Next());
+
+		if (headFace->Normal_f()[1] < 0) {
+			validFaces.push_back(headFace);
+			HEdgeList edges;
+			edges.push_back(headFace->HalfEdge());
+			edges.push_back(headFace->HalfEdge()->Next());
+			edges.push_back(headFace->HalfEdge()->Next()->Next());
+			for (int i11 = 0; i11 < edges.size(); i11++) {
+				Face* adjFace = edges[i11]->Twin()->LeftFace();
+				if (adjFace != NULL) {
+					if (adjFace->Normal_f()[1]<0) {
+						adjCounts[validFaces.size() - 1]++;
+					}
+				}			
+			}
+		}
+
+		for (size_t i1 = 0; i1 < validEdges.size(); i1++) {
+			if (validEdges[i1]->Twin() != NULL) {
+				Face* newFace = validEdges[i1]->Twin()->LeftFace();
+				HEdgeList edges;
+				edges.push_back(newFace->HalfEdge());
+				edges.push_back(newFace->HalfEdge()->Next());
+				edges.push_back(newFace->HalfEdge()->Next()->Next());
+
+				for (int i11 = 0; i11 < edges.size(); i11++) {
+					if (edges[i11]->Twin()->IsValid()) {
+						edges[i11]->Twin()->SetValid(false);
+					}else{
+						edges[i11]->SetValid(true);
+					}
+				}
+				faceBFS.push(newFace);
+			}
+		}
+		faceBFS.pop();
+	}
+	
+	for (size_t i = 0; i < validFaces.size() - 1; i++) {
+		int parent = i;
+		int child;
+		if(adjCounts[i] > 0) {
+			for (size_t i1 = i + 1; i1 < validFaces.size(); i1++) {
+				// if have same vertex, regard as connection
+				//Vertex* v11 = validFaces[i]->HalfEdge()->Start();
+				//Vertex* v12 = validFaces[i]->HalfEdge()->Next()->Start();
+				//Vertex* v13 = validFaces[i]->HalfEdge()->Next()->Next()->Start();
+				//Vertex* v21 = validFaces[i1]->HalfEdge()->Start();
+				//Vertex* v22 = validFaces[i1]->HalfEdge()->Next()->Start();
+				//Vertex* v23 = validFaces[i1]->HalfEdge()->Next()->Next()->Start();
+				HEdge* v11 = validFaces[i]->HalfEdge();
+				HEdge* v12 = validFaces[i]->HalfEdge()->Next();
+				HEdge* v13 = validFaces[i]->HalfEdge()->Next()->Next();
+				HEdge* v21 = validFaces[i1]->HalfEdge()->Twin();
+				HEdge* v22 = validFaces[i1]->HalfEdge()->Next()->Twin();
+				HEdge* v23 = validFaces[i1]->HalfEdge()->Next()->Next()->Twin();
+				if ((v11 == v21 || v11 == v22 || v11 == v23) ||
+					(v12 == v21 || v12 == v22 || v12 == v23) ||
+					(v13 == v21 || v13 == v22 || v13 == v23)) {
+					child = i1;
+					vector<int> passBy;
+					while (child != union_find[child]) //find child root
+					{
+						passBy.push_back(child);
+						child = union_find[child];
+					}
+					for (size_t i11 = 0; i11 < passBy.size(); i11++) {
+						union_find[passBy[i11]] = child;
+					}
+					passBy.clear();
+					while (parent != union_find[parent]) //find parent root
+					{
+						passBy.push_back(parent);
+						parent = union_find[parent];
+					}
+					for (size_t i11 = 0; i11 < passBy.size(); i11++) {
+						union_find[passBy[i11]] = parent;
+					}
+					union_find[child] = parent;
+
+					adjCounts[i]--;
+					adjCounts[i1]--;
+					if (adjCounts[i] == 0) {
+						break;
+					}
+				}
+			}
+		}
+
+	}
+
+	for (size_t i = 0; i < union_find.size(); i++) {
+		if (union_find[i] == i) {
+			no_component++;
+		}
+	}
+
+	clockEnd = clock();
+	cout << "caculated in: " << clockEnd - clockBegin <<" ms"<< endl;
+	cout << "number of Connected components: " << no_component << endl;
+
+	cout << "--------------------------" << endl;
+	cout << "BFS method is faster, however naive method can calculate components connected by vertex" << endl;
+	return no_component;
+}
+
+
 
 void Mesh::DFSVisit(Vertex * v)
 {

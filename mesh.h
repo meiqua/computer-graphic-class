@@ -326,6 +326,8 @@ public:
 	// implement them if in needed
 	int CountBoundaryLoops();
 	int CountConnectedComponents();
+	int CountConnectedComponents_naive();
+
 	void DFSVisit(Vertex * v);
 
 	//void DeleteSelectedVertex(int vertex);
